@@ -11,6 +11,7 @@
 #include "cor.h"
 #include <atlbase.h>
 #pragma warning(pop)
+#include <string>
 
 namespace blackbone
 {
