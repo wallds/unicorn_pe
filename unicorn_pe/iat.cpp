@@ -175,7 +175,7 @@ bool PeEmulation::RebuildSection(PVOID ImageBase, ULONG ImageSize, virtual_buffe
 				FakeSection_t *call_addr_section = NULL;
 				if (FindSectionByAddress(engine_encrypt_string_addr, &encrypt_string_section) &&
 					FindSectionByAddress(engine_call_addr, &call_addr_section) &&
-					!encrypt_string_section->IsUnknownSection && 
+					encrypt_string_section->IsUnknownSection && 
 					call_addr_section->IsUnknownSection)
 				{
 					vmpstrs.emplace_back(insn_rva, encrypt_string_rva, call_rva);
@@ -336,7 +336,9 @@ bool PeEmulation::RebuildSection(PVOID ImageBase, ULONG ImageSize, virtual_buffe
 
 		auto call_entry = m_ImageBase + vmpstrs[j].insn_rva;
 		auto call_end = call_entry + 13;
+		this->m_DisplayDisasm = true;
 		auto err = uc_emu_start(m_uc, call_entry, call_end, 0, 0);
+		this->m_DisplayDisasm = false;
 
 		if (err == UC_ERR_OK)
 		{

@@ -13,6 +13,19 @@ void EmuLoadLibraryA(uc_engine *uc, uint64_t address, uint32_t size, void *user_
 void EmuGetProcAddress(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuGetModuleHandleA(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuGetLastError(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
+
+void EmuHeapCreate(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuHeapDestroy(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuHeapSetInformation(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+
+void EmuFlsAlloc(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuFlsSetValue(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+
+void EmuGetModuleFileNameA(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuRtlEncodePointer(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuRtlDecodePointer(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuGetTickCount(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+
 void EmuInitializeCriticalSectionAndSpinCount(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuInitializeCriticalSectionEx(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuTlsAlloc(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
@@ -20,6 +33,13 @@ void EmuTlsSetValue(uc_engine *uc, uint64_t address, uint32_t size, void *user_d
 void EmuTlsFree(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuDeleteCriticalSection(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuLocalAlloc(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
+void EmuLocalFree(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+
+void EmuRtlAllocateHeap(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuRtlEnterCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuRtlLeaveCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+void EmuRtlInitializeCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data);
+
 void EmuRtlIsProcessorFeaturePresent(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuNtProtectVirtualMemory(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);
 void EmuGetProcessAffinityMask(uc_engine *uc, uint64_t address, uint32_t size, void *user_data);

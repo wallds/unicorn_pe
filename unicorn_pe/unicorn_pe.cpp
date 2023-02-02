@@ -54,11 +54,11 @@ blackbone::LoadData ManualMapCallback(blackbone::CallbackType type, void* contex
 	PeEmulation *ctx = (PeEmulation *)context;
 	if (type == blackbone::PreCallback)
 	{
-		uint64_t desiredBase = ctx->m_LoadModuleBase;
-		uint64_t desiredNextLoadBase = PAGE_ALIGN_64k((uint64_t)ctx->m_LoadModuleBase + (uint64_t)modInfo.size + 0x10000ull);
-		ctx->m_LoadModuleBase = desiredNextLoadBase;
+		//uint64_t desiredBase = ctx->m_LoadModuleBase;
+		//uint64_t desiredNextLoadBase = PAGE_ALIGN_64k((uint64_t)ctx->m_LoadModuleBase + (uint64_t)modInfo.size + 0x5000000ull);
+		//ctx->m_LoadModuleBase = desiredNextLoadBase;
 
-		return blackbone::LoadData(blackbone::MT_Default, blackbone::Ldr_None, ctx->m_LoadModuleBase);
+		return blackbone::LoadData(blackbone::MT_Default, blackbone::Ldr_None, 0);
 	}
 	else if (type == blackbone::PostCallback)
 	{
@@ -330,7 +330,7 @@ NTSTATUS PeEmulation::LdrFindDllByName(const std::wstring &DllName, ULONG64 *Ima
 			newDllName += L".DLL";
 	}
 
-	auto moduleptr = thisProc.modules().GetModule(newDllName, blackbone::eModSeachType::PEHeaders, mt_default);
+	auto moduleptr = thisProc.modules().GetModule(newDllName, blackbone::eModSeachType::ManualOnly, mt_default);
 
 	if (moduleptr)
 	{
@@ -430,18 +430,21 @@ void PeEmulation::MapImageToEngine(const std::wstring &ImageName, PVOID ImageBas
 
 		uc_mem_protect(m_uc, image_base + SectionHeader[i].VirtualAddress, SectionSize, prot);
 
+		bool bIsUnknownSection = (0 == memcmp((char*)SectionHeader[i].Name, ".text\0\0\0", 8)
+								  || 0 == memcmp((char*)SectionHeader[i].Name, "INIT\0\0\0\0", 8)
+								  || 0 == memcmp((char*)SectionHeader[i].Name, "PAGE\0\0\0\0", 8)) ? false : true;
 		if (SectionHeader[i].Characteristics & (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE))
 		{
-			bool bIsUnknownSection = (0 == memcmp((char *)SectionHeader[i].Name, ".text\0\0\0", 8)
-				|| 0 == memcmp((char *)SectionHeader[i].Name, "INIT\0\0\0\0", 8)
-				|| 0 == memcmp((char *)SectionHeader[i].Name, "PAGE\0\0\0\0", 8)) ? false : true;
-
 			mod->FakeSections.emplace_back(SectionHeader[i].VirtualAddress, SectionSize, (char *)SectionHeader[i].Name, bIsUnknownSection);
 
 			uc_hook trace3;
 			uc_hook_add(m_uc, &trace3, UC_HOOK_CODE, EmuUnknownAPI,
 				this, image_base + SectionHeader[i].VirtualAddress,
 				image_base + SectionHeader[i].VirtualAddress + SectionSize - 1);
+		}
+		else
+		{
+			mod->FakeSections.emplace_back(SectionHeader[i].VirtualAddress, SectionSize, (char*)SectionHeader[i].Name, bIsUnknownSection);
 		}
 	}
 }
@@ -1225,7 +1228,25 @@ int main(int argc, char **argv)
 		ctx.RegisterAPIEmulation(L"kernel32.dll", "TlsSetValue", EmuTlsSetValue, 2);
 		ctx.RegisterAPIEmulation(L"kernel32.dll", "TlsFree", EmuTlsFree, 1);
 		ctx.RegisterAPIEmulation(L"kernel32.dll", "LocalAlloc", EmuLocalAlloc, 2);
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "LocalFree", EmuLocalFree, 1);
 		ctx.RegisterAPIEmulation(L"ntdll.dll", "NtProtectVirtualMemory", EmuNtProtectVirtualMemory, 5);
+
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "HeapCreate", EmuHeapCreate, 3);
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "HeapDestroy", EmuHeapDestroy, 1);
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "HeapSetInformation", EmuHeapSetInformation, 4);
+
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "FlsAlloc", EmuFlsAlloc, 1);
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "FlsSetValue", EmuFlsSetValue, 1);
+
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "GetModuleFileNameA", EmuGetModuleFileNameA, 3);
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlEncodePointer", EmuRtlEncodePointer, 1);
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlDecodePointer", EmuRtlDecodePointer, 1);
+		ctx.RegisterAPIEmulation(L"kernel32.dll", "GetTickCount", EmuGetTickCount, 0);
+
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlAllocateHeap", EmuRtlAllocateHeap, 1);
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlEnterCriticalSection", EmuRtlEnterCriticalSection, 1);
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlLeaveCriticalSection", EmuRtlLeaveCriticalSection, 1);
+		ctx.RegisterAPIEmulation(L"ntdll.dll", "RtlInitializeCriticalSection", EmuRtlInitializeCriticalSection, 1);
 	}
 	else
 	{

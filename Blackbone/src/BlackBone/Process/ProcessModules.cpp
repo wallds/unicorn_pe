@@ -8,6 +8,7 @@
 #include "../Asm/AsmFactory.h"
 
 #include <memory>
+#include <iterator>
 #include <type_traits>
 
 #ifdef COMPILER_MSVC

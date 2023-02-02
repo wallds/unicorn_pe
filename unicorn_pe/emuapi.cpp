@@ -239,6 +239,102 @@ void EmuGetLastError(uc_engine *uc, uint64_t address, uint32_t size, void *user_
 	*outs << "GetLastError return " << r << "\n";
 }
 
+void EmuHeapCreate(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 0x12345678000;
+
+	auto err = uc_reg_write(uc, UC_X86_REG_RAX, &r);
+
+	*outs << "HeapCreate return " << r << "\n";
+}
+
+void EmuHeapDestroy(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 1;
+
+	auto err = uc_reg_write(uc, UC_X86_REG_RAX, &r);
+
+	*outs << "EmuHeapDestroy return " << r << "\n";
+}
+
+void EmuHeapSetInformation(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 1;
+
+	auto err = uc_reg_write(uc, UC_X86_REG_RAX, &r);
+
+	*outs << "HeapSetInformation return " << r << "\n";
+}
+
+void EmuRtlEncodePointer(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t rcx;
+	auto err = uc_reg_read(uc, UC_X86_REG_RCX, &rcx);
+	err = uc_reg_write(uc, UC_X86_REG_RAX, &rcx);
+
+	*outs << "RtlEncodePointer return " << rcx << "\n";
+}
+
+void EmuRtlDecodePointer(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 1;
+
+	uint64_t rcx;
+	auto err = uc_reg_read(uc, UC_X86_REG_RCX, &rcx);
+	err = uc_reg_write(uc, UC_X86_REG_RAX, &rcx);
+
+	*outs << "RtlDecodePointer return " << rcx << "\n";
+}
+
+void EmuFlsAlloc(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 1;
+
+	auto err = uc_reg_write(uc, UC_X86_REG_RAX, &r);
+
+	*outs << "FlsAlloc return " << r << "\n";
+}
+
+void EmuFlsSetValue(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t r = 1;
+
+	auto err = uc_reg_write(uc, UC_X86_REG_RAX, &r);
+
+	*outs << "FlsAlloc return " << r << "\n";
+}
+
+void EmuGetModuleFileNameA(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	PeEmulation* ctx = (PeEmulation*)user_data;
+
+	uint64_t rcx;
+	auto err = uc_reg_read(uc, UC_X86_REG_RCX, &rcx);
+	uint32_t rdx;
+	err = uc_reg_read(uc, UC_X86_REG_EDX, &rdx);
+	uint32_t r8d;
+	err = uc_reg_read(uc, UC_X86_REG_R8D, &r8d);
+
+	auto mod = ctx->thisProc.modules().GetModule(rcx, true, blackbone::eModSeachType::ManualOnly);
+	if (!mod || mod->fullPath.size() > r8d) 
+	{
+		uint32_t r = 0;
+		err = uc_reg_write(uc, UC_X86_REG_EAX, &r);
+		return;
+	}
+	uc_mem_write(uc, rcx, mod->fullPath.c_str(), mod->fullPath.size());
+	uint32_t r = mod->fullPath.size();
+	err = uc_reg_write(uc, UC_X86_REG_EAX, &r);
+}
+
+void EmuGetTickCount(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	uint64_t tick_count = GetTickCount();
+	auto err = uc_reg_write(uc, UC_X86_REG_EAX, &tick_count);
+
+	*outs << "GetTickCount return " << tick_count << "\n";
+}
+
 void EmuInitializeCriticalSectionAndSpinCount(uc_engine *uc, uint64_t address, uint32_t size, void *user_data)
 {
 	uint64_t rcx;
@@ -380,6 +476,56 @@ void EmuLocalAlloc(uc_engine *uc, uint64_t address, uint32_t size, void *user_da
 	*outs << "LocalAlloc " << edx << " bytes, allocated at " << std::hex << alloc << "\n";
 
 	err = uc_reg_write(uc, UC_X86_REG_RAX, &alloc);
+}
+
+void EmuLocalFree(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	PeEmulation* ctx = (PeEmulation*)user_data;
+
+	uint64_t result = 0;
+
+	uint32_t rcx;
+	auto err = uc_reg_read(uc, UC_X86_REG_ECX, &rcx);
+
+	if (!ctx->HeapFree(rcx)) 
+	{
+		result = rcx;
+	}
+
+	*outs << "LocalFree " << rcx << "|" << std::hex << result << "\n";
+
+	err = uc_reg_write(uc, UC_X86_REG_RAX, &result);
+}
+
+void EmuRtlAllocateHeap(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+	PeEmulation* ctx = (PeEmulation*)user_data;
+
+	uint32_t rcx;
+	auto err = uc_reg_read(uc, UC_X86_REG_RCX, &rcx);
+
+	uint32_t rdx;
+	err = uc_reg_read(uc, UC_X86_REG_RDX, &rdx);
+
+	uint32_t r8;
+	err = uc_reg_read(uc, UC_X86_REG_R8, &r8);
+
+
+	uint64_t alloc = ctx->HeapAlloc(r8, true);
+
+	err = uc_reg_write(uc, UC_X86_REG_RAX, &alloc);
+}
+
+void EmuRtlEnterCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+}
+
+void EmuRtlLeaveCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
+}
+
+void EmuRtlInitializeCriticalSection(uc_engine* uc, uint64_t address, uint32_t size, void* user_data)
+{
 }
 
 void EmuRtlIsProcessorFeaturePresent(uc_engine *uc, uint64_t address, uint32_t size, void *user_data)
